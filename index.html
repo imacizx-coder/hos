@@ -1,0 +1,864 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Human OS gamma</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap');
+
+        :root {
+            /* Warna Matte Ceria (Dark Mode Default) */
+            --primary: #45b592; /* Matte Mint */
+            --primary-dark: #3ba885;
+            --secondary: #ffb03a; /* Matte Warm Yellow */
+            --secondary-dark: #e89b27;
+            --success: #4db6ac; 
+            --bg: #1a1e23; 
+            --text: #e2e8f0; 
+            --card-bg: #2a2f35; 
+            --border: #3f4752; 
+            --accent: #f07167; /* Matte Coral */
+            --danger: #e05e5e;
+            --journal-bg: #353b43;
+            --journal-text: #f8fafc;
+        }
+        [data-theme="light"] {
+            /* Warna Matte Ceria (Light Mode) */
+            --primary: #52c49e; 
+            --primary-dark: #45b592;
+            --secondary: #ffb84d; 
+            --secondary-dark: #f0a330;
+            --success: #38bdf8; 
+            --bg: #f4f7f6; 
+            --text: #334155; 
+            --card-bg: #ffffff; 
+            --border: #e2e8f0;
+            --journal-bg: #fffdf2; /* Terang dan ceria */
+            --journal-text: #334155;
+        }
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); color: var(--text); 
+            margin: 0; padding-bottom: 90px; transition: background 0.3s, color 0.3s;
+        }
+        
+        .container { width: 100%; max-width: 500px; margin: auto; padding: 20px 15px; box-sizing: border-box; }
+        
+        /* Glassmorphism Navigation */
+        .nav-bottom {
+            position: fixed; bottom: 15px; width: calc(100% - 30px); max-width: 470px;
+            background: var(--card-bg); display: flex; justify-content: space-around;
+            padding: 15px 0; border-radius: 25px; border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 1000; left: 50%; transform: translateX(-50%);
+            transition: 0.3s;
+        }
+        .nav-item { font-size: 1.5rem; cursor: pointer; transition: 0.3s; opacity: 0.4; filter: grayscale(100%); }
+        .nav-item.active { opacity: 1; transform: translateY(-5px) scale(1.15); filter: grayscale(0%); text-shadow: 0 0 15px rgba(69, 181, 146, 0.5); }
+
+        .page { display: none; animation: slideUp 0.3s ease-out forwards; opacity: 0; transform: translateY(15px); }
+        .page.active { display: block; }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Premium Cards */
+        .card {
+            background: var(--card-bg); border-radius: 20px; padding: 20px;
+            margin-bottom: 18px; border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            position: relative; overflow: hidden; transition: 0.3s;
+        }
+        
+        /* Journal Special Card */
+        .journal-card {
+            background: var(--journal-bg); color: var(--journal-text);
+            border: 2px solid var(--secondary);
+        }
+        
+        /* Buttons */
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 14px; 
+            border-radius: 14px; width: 100%; font-weight: 700; cursor: pointer; 
+            transition: 0.2s; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-duck { background: var(--secondary); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .btn:active { transform: scale(0.97); }
+        
+        /* XP Bar */
+        .xp-bar {
+            height: 14px; background: rgba(0,0,0,0.08); border-radius: 10px;
+            margin-top: 10px; overflow: hidden; border: 1px solid var(--border);
+        }
+        #xp-fill {
+            height: 100%; width: 0%; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--primary);
+        }
+
+        /* Habits */
+        .habit-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem;
+        }
+        .habit-row:last-child { border-bottom: none; }
+        input[type="checkbox"] {
+            width: 24px; height: 24px; accent-color: var(--primary); cursor: pointer;
+            border-radius: 6px; transition: 0.2s;
+        }
+        .del-btn { background: var(--danger); color: white; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.75rem; display: none; font-weight: bold; }
+        .edit-mode .del-btn { display: inline-block; }
+        .edit-mode input[type="checkbox"] { display: none; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        
+        input, select, textarea {
+            width: 100%; background: transparent; border: 2px solid var(--border);
+            color: var(--text); padding: 12px; border-radius: 12px;
+            margin: 6px 0; box-sizing: border-box; font-family: inherit; outline: none;
+            transition: 0.2s; font-size: 0.9rem;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--primary); background: rgba(69, 181, 146, 0.05); }
+
+        .tag { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; background: var(--border); color: var(--text); font-weight: 700; display: inline-block; margin-bottom: 5px;}
+        .quote-box { font-style: italic; opacity: 0.8; font-size: 0.95rem; text-align: center; margin: 5px 0; font-weight: 500; }
+        
+        /* Rank Visuals */
+        .rank-container { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+        .rank-svg { width: 50px; height: 50px; }
+
+        .history-item { border-left: 3px solid var(--primary); padding-left: 15px; margin-bottom: 15px; background: var(--border); padding: 12px; border-radius: 0 12px 12px 0; }
+        .journal-img-preview { max-width: 100%; border-radius: 12px; margin-top: 10px; display: none; border: 2px solid var(--border); }
+        
+        /* Spotify Mock */
+        .spotify-box { background: #1DB954; color: white; border-radius: 16px; padding: 15px; margin-top: 15px; }
+        .disclaimer { font-size: 0.7rem; opacity: 0.8; margin-top: 5px; text-align: center; }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="container">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px;">
+        <div>
+            <h2 style="margin: 0; font-weight: 800; color: var(--primary);">
+                Human OS <span style="font-size: 0.55em; background: var(--accent); color: white; padding: 3px 8px; border-radius: 8px; vertical-align: middle;">gamma</span>
+            </h2>
+            <div style="font-size: 0.75rem; opacity: 0.6; font-weight: 600; margin-top: 2px;">by jaki rasyid</div>
+            <div id="display-date" style="font-size: 0.8rem; font-weight: 700; margin-top: 5px; color: var(--secondary);"></div>
+        </div>
+        <button style="width: 45px; height: 45px; border-radius: 14px; border: 2px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 1.2rem; cursor: pointer;" onclick="toggleTheme()">🌓</button>
+    </header>
+
+    <div id="home" class="page active">
+        <div class="card" style="border-color: var(--primary);">
+            <div class="quote-box" id="daily-quote">"Loading quote..."</div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <span style="font-weight: 800; font-size: 1.1rem;">Level <span id="lvl" style="color: var(--primary);">1</span> <span style="font-size:0.75rem; opacity:0.6;">/ 10</span></span>
+                    <div class="rank-container">
+                        <div id="rank-icon"></div>
+                        <div style="font-weight: 700; font-size: 1rem; color: var(--secondary);" id="rank-display">Telur Bebek</div>
+                    </div>
+                </div>
+                <div style="text-align: right; font-weight: 800; font-size: 1.1rem; color: var(--accent);">
+                    🔥 <span id="streak">0</span> Hari
+                </div>
+            </div>
+            <div class="xp-bar"><div id="xp-fill"></div></div>
+            <div style="font-size: 0.75rem; margin-top: 8px; opacity: 0.6; text-align: right; font-weight: bold;" id="xp-text">0 / 500 XP</div>
+        </div>
+
+        <div class="card" id="habit-card">
+            <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                <strong style="font-size: 1.1rem;">✅ Misi Harian</strong>
+                <div>
+                    <button onclick="toggleEditHabit()" style="background:var(--border); border:none; color:var(--text); padding: 5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 0.8rem;">⚙️ Edit</button>
+                    <span style="background: var(--primary); padding: 5px 10px; border-radius: 8px; color: white; font-weight: bold; font-size: 0.8rem; margin-left: 5px;" id="progress-pct">0%</span>
+                </div>
+            </div>
+            <div id="habit-container"></div>
+            
+            <div id="add-habit-form" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                <input type="text" id="new-habit-text" placeholder="Nama Misi Baru...">
+                <select id="new-habit-cat">
+                    <option value="Produktivitas">🚀 Produktivitas</option>
+                    <option value="Edukasi">📚 Edukasi & Belajar</option>
+                    <option value="Kesehatan">🍏 Kesehatan Fisik</option>
+                    <option value="Mental">🧘 Mental & Jiwa</option>
+                    <option value="Keuangan">💰 Keuangan</option>
+                    <option value="Sosial">🤝 Sosial & Keluarga</option>
+                    <option value="Ibadah">🕌/⛪ Ibadah</option>
+                    <option value="Tugas Rumah">🧹 Tugas Rumah</option>
+                    <option value="Hobi">🎨 Hobi & Kreativitas</option>
+                </select>
+                <button class="btn btn-duck" style="margin-top: 5px;" onclick="addHabit()">+ Tambah Misi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="focus" class="page">
+        <div class="card" style="text-align: center;">
+            <div class="tag">Academic Mode 🧠</div>
+            <div style="font-size: 5rem; font-weight: 800; color: var(--text); margin: 5px 0; font-variant-numeric: tabular-nums;" id="timer">25:00</div>
+            <div class="grid" style="margin-bottom: 20px;">
+                <button class="btn" onclick="startTimer()">▶ Mulai</button>
+                <button class="btn" style="background: var(--border); color: var(--text);" onclick="resetTimer()">⏹ Reset</button>
+            </div>
+            
+            <div class="spotify-box" id="spotify-unlinked">
+                <div style="font-weight: 800; margin-bottom: 5px;">🎧 Musik Fokus</div>
+                <button class="btn" style="background: white; color: #1DB954; font-weight: 800;" onclick="linkSpotify()">Tautkan Akun Spotify</button>
+                <div class="disclaimer">Data hanya akan dibaca oleh server, tidak pergi ke pihak manapun.</div>
+            </div>
+            
+            <div class="spotify-box" id="spotify-linked" style="display: none; background: rgba(29, 185, 84, 0.1); border: 1px solid #1DB954;">
+                <div style="display: flex; align-items: center; gap: 10px; color: var(--text);">
+                    <div style="background: #1DB954; width: 40px; height: 40px; border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size: 1.5rem;">🎵</div>
+                    <div style="text-align: left;">
+                        <div style="font-size: 0.7rem; color: #1DB954; font-weight:bold;">NOW PLAYING</div>
+                        <div style="font-weight: 700; font-size: 0.95rem;">Lofi Study Beats</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Spotify Connect</div>
+                    </div>
+                </div>
+                <iframe style="border-radius:12px; margin-top:15px;" src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4ZsnsnD?utm_source=generator&theme=0" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            </div>
+        </div>
+
+        <div class="card journal-card">
+            <div style="display:flex; justify-content: space-between; align-items:center;">
+                <strong style="font-size: 1.1rem;">📖 Jurnal Harian</strong>
+                <button onclick="viewJournalHistory()" style="background:var(--primary); border:none; color:white; padding:5px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.8rem;">Riwayat</button>
+            </div>
+            
+            <label style="font-size: 0.85rem; font-weight: 700; margin-top: 15px; display:block;">Mood Kamu Hari Ini:</label>
+            <select id="mood-select" onchange="saveAll()" style="font-size: 1.1rem; text-align:center; background: rgba(255,255,255,0.2);">
+                <option value="Melon Segar 🍈🤩">Melon Segar 🍈🤩 (Luar Biasa)</option>
+                <option value="Bebek Santai 🦆😎">Bebek Santai 🦆😎 (Tenang/Fokus)</option>
+                <option value="Senang 😊">Senang 😊 (Baik)</option>
+                <option value="Biasa Saja 😐">Biasa Saja 😐</option>
+                <option value="Bebek Lelah 🦆😫">Bebek Lelah 🦆😫 (Stres/Capek)</option>
+                <option value="Sedih 😢">Sedih 😢</option>
+            </select>
+
+            <label style="font-size: 0.85rem; font-weight: 700; margin-top: 10px; display:block;">Cerita / Rasa Syukur:</label>
+            <textarea id="gratitude" placeholder="Tulis kejadian menarik atau hal yang kamu syukuri hari ini..." onchange="saveAll()" rows="3" style="background: rgba(255,255,255,0.2);"></textarea>
+            
+            <label style="font-size: 0.85rem; font-weight: 700; margin-top: 10px; display:block;">📷 Foto Momen (Opsional):</label>
+            <input type="file" id="journal-photo" accept="image/*" onchange="handleImageUpload(event)" style="padding: 10px; background: rgba(255,255,255,0.2);">
+            <img id="preview-img" class="journal-img-preview" alt="Preview Foto">
+        </div>
+
+        <div id="journal-history-area" class="card" style="display:none; border: 2px solid var(--primary);">
+            <strong style="color:var(--primary);">Riwayat Jurnal 📚</strong>
+            <div id="journal-history-list" style="margin-top: 15px; max-height: 400px; overflow-y: auto;"></div>
+            <button class="btn" style="margin-top: 15px; background: var(--border); color: var(--text);" onclick="document.getElementById('journal-history-area').style.display='none'">Tutup Riwayat</button>
+        </div>
+    </div>
+
+    <div id="finance" class="page">
+        <div class="card" style="border: 2px solid var(--success);">
+            <div class="tag" style="background: var(--success); color: white;">Brankas Keuangan 💰</div>
+            <div style="font-size: 2.2rem; font-weight: 800; margin: 15px 0; color: var(--success);" id="balance">Rp 0</div>
+            
+            <input type="number" id="money-amt" placeholder="Nominal (Cth: 20000)" />
+            <input type="text" id="money-note" placeholder="Keterangan (Cth: Jajan Kantin)" />
+            
+            <div class="grid" style="margin-top: 15px;">
+                <button class="btn" style="background: var(--success);" onclick="addFinance('in')">📥 Pemasukan</button>
+                <button class="btn" style="background: var(--danger);" onclick="addFinance('out')">📤 Pengeluaran</button>
+            </div>
+        </div>
+        <div style="font-weight: 800; margin: 20px 0 10px 5px; font-size: 1.1rem;">Riwayat Terakhir</div>
+        <div id="fin-history"></div>
+    </div>
+
+    <div id="stats" class="page">
+        <div class="card">
+            <h3 style="margin-top:0;">📈 Produktivitas 7 Hari</h3>
+            <canvas id="statChart"></canvas>
+        </div>
+        
+        <div class="card" style="border: 2px solid var(--accent);">
+            <div class="tag" style="background: var(--accent); color: white;">Digital Detox 📱</div>
+            <p style="font-size: 0.75rem; opacity: 0.8; margin: 5px 0 15px 0;">Catat waktu layarmu hari ini.</p>
+            
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label style="font-size:0.75rem; font-weight:bold;">Jam</label>
+                    <input type="number" id="st-hours" min="0" max="24" value="0" onchange="updateScreentime()" style="font-size:1.2rem; text-align:center;">
+                </div>
+                <div style="font-size: 1.5rem; font-weight:bold; margin-top:15px;">:</div>
+                <div style="flex: 1;">
+                    <label style="font-size:0.75rem; font-weight:bold;">Menit</label>
+                    <input type="number" id="st-mins" min="0" max="59" value="0" step="5" onchange="updateScreentime()" style="font-size:1.2rem; text-align:center;">
+                </div>
+            </div>
+            
+            <div id="st-commentary" style="text-align:center; padding: 10px; border-radius: 10px; font-weight:bold; font-size:0.9rem; background: var(--border);">
+                Mulai catat screen time-mu!
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="tag" style="background: var(--secondary); color: white;">Persiapan Besok 👕</div>
+            <label style="font-size: 0.85rem; font-weight: 700; margin-top:10px; display:block;">Pilih Outfit / Seragam:</label>
+            <select id="outfit-select" onchange="handleOutfitChange()" style="margin-top: 5px;">
+                <option value="Seragam OSIS">Seragam OSIS (Putih Abu)</option>
+                <option value="Seragam Pramuka">Seragam Pramuka</option>
+                <option value="Seragam Batik">Seragam Batik</option>
+                <option value="Baju Olahraga">Baju Olahraga</option>
+                <option value="Baju Bebas / Kasual">Baju Bebas / Kasual</option>
+                <option value="custom">-- Ketik Sendiri --</option>
+            </select>
+            <input type="text" id="outfit-custom" placeholder="Ketik outfitmu..." style="display: none; margin-top: 10px;" onchange="saveAll()">
+        </div>
+    </div>
+
+    <div id="settings" class="page">
+        <div class="card">
+            <h3 style="margin-top:0;">⚙️ Sistem & Preferensi</h3>
+            
+            <label style="font-size: 0.85rem; font-weight: bold; display:block; margin-top:10px;">Bahasa Aplikasi:</label>
+            <select style="margin-bottom: 15px;">
+                <option value="id">🇮🇩 Bahasa Indonesia</option>
+                <option value="en">🇬🇧 English (Mockup)</option>
+            </select>
+            
+            <label style="font-size: 0.85rem; font-weight: bold; display:block;">Animasi & Efek Visual:</label>
+            <select style="margin-bottom: 20px;">
+                <option value="on">Aktif (Disarankan)</option>
+                <option value="off">Matikan (Hemat Baterai)</option>
+            </select>
+
+            <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-bottom: 15px;">
+                <strong style="font-size: 0.9rem;">Backup & Restore Data</strong>
+                <p style="font-size: 0.75rem; opacity: 0.8;">Data kamu hanya tersimpan di browser ini. Lakukan backup secara berkala.</p>
+                <div class="grid">
+                    <button class="btn" style="background: var(--primary);" onclick="exportData()">📤 Export</button>
+                    <button class="btn" style="background: var(--border); color: var(--text);" onclick="importData()">📥 Import</button>
+                </div>
+            </div>
+            
+            <div style="border-top: 1px solid var(--border); padding-top: 15px;">
+                <button class="btn" style="background: rgba(224, 94, 94, 0.1); color: var(--danger);" onclick="clearAll()">⚠️ Reset Seluruh Aplikasi</button>
+            </div>
+        </div>
+        
+        <div style="text-align:center; opacity: 0.5; font-size: 0.75rem; margin-bottom: 30px; line-height: 1.5;">
+            <strong>Human OS gamma (v1.1)</strong><br>
+            Designed carefully for Jaki Rasyid<br>
+            <em>Privasi Terjaga. Tidak ada data yang dikirim ke server luar.</em>
+        </div>
+    </div>
+</div>
+
+<nav class="nav-bottom">
+    <div class="nav-item active" onclick="showPage('home', this)">🏠</div>
+    <div class="nav-item" onclick="showPage('focus', this)">🎧</div>
+    <div class="nav-item" onclick="showPage('finance', this)">💰</div>
+    <div class="nav-item" onclick="showPage('stats', this)">📊</div>
+    <div class="nav-item" onclick="showPage('settings', this)">⚙️</div>
+</nav>
+
+<script>
+    // System Constants
+    const RanksInfo = [
+        { name: "Telur Bebek", svg: '<svg viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="35" ry="45" fill="#fef3c7" stroke="#fbbf24" stroke-width="4"/></svg>' },
+        { name: "Anak Bebek", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#fde047"/><circle cx="35" cy="40" r="5" fill="#000"/><circle cx="65" cy="40" r="5" fill="#000"/><path d="M40 60 Q50 70 60 60" stroke="#f97316" stroke-width="8" fill="none" stroke-linecap="round"/></svg>' },
+        { name: "Bebek Berjalan", svg: '<svg viewBox="0 0 100 100"><path d="M30 60 Q50 80 70 60 L80 40 Q50 20 20 40 Z" fill="#facc15"/><circle cx="35" cy="40" r="4" fill="#000"/><path d="M20 45 L5 40 L20 35 Z" fill="#ea580c"/></svg>' },
+        { name: "Bebek Berlari", svg: '<svg viewBox="0 0 100 100"><path d="M20 50 Q50 70 80 40 L90 20 Q50 10 10 30 Z" fill="#eab308"/><circle cx="25" cy="30" r="4" fill="#000"/><path d="M10 35 L0 25 L15 25 Z" fill="#ea580c"/><line x1="10" y1="80" x2="30" y2="60" stroke="#000" stroke-width="3"/></svg>' },
+        { name: "Bebek Melon", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#4ade80"/><circle cx="50" cy="50" r="25" fill="#facc15"/><circle cx="40" cy="45" r="3" fill="#000"/><circle cx="60" cy="45" r="3" fill="#000"/><path d="M45 55 Q50 60 55 55" stroke="#ea580c" stroke-width="4" fill="none"/></svg>' },
+        { name: "Pelajar Melon", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#4ade80"/><rect x="20" y="20" width="60" height="10" fill="#1e293b"/><line x1="50" y1="20" x2="50" y2="10" stroke="#1e293b" stroke-width="4"/><circle cx="40" cy="45" r="4" fill="#000"/><circle cx="60" cy="45" r="4" fill="#000"/></svg>' },
+        { name: "Pejuang Fokus", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#facc15"/><rect x="15" y="35" width="70" height="15" fill="#ef4444" rx="5"/><circle cx="35" cy="42" r="4" fill="#fff"/><circle cx="65" cy="42" r="4" fill="#fff"/></svg>' },
+        { name: "Master Melon", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="40" fill="#4ade80"/><path d="M20 40 L50 10 L80 40 Z" fill="#fbbf24"/><circle cx="40" cy="50" r="4" fill="#000"/><circle cx="60" cy="50" r="4" fill="#000"/></svg>' },
+        { name: "Dewa Bebek", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#facc15"/><path d="M30 20 L40 5 L50 15 L60 5 L70 20 Z" fill="#fbbf24"/><circle cx="35" cy="45" r="5" fill="#000"/><circle cx="65" cy="45" r="5" fill="#000"/></svg>' },
+        { name: "Legenda Human OS", svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="url(#grad)"/><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4ade80;stop-opacity:1" /><stop offset="100%" style="stop-color:#facc15;stop-opacity:1" /></linearGradient></defs><text x="50" y="65" font-size="40" text-anchor="middle" fill="#fff" font-weight="bold">★</text></svg>' }
+    ];
+    
+    const Quotes = [
+        "Bebek yang tenang di atas air, mengayuh keras di bawahnya. Teruslah berjuang! 🦆",
+        "Semanis melon, sekeras tekadmu hari ini. 🍈",
+        "Masa depan adalah milik mereka yang menyiapkan hari ini. 🚀",
+        "Disiplin adalah jembatan antara cita-cita dan kenyataan. 🌉",
+        "Satu persen lebih baik setiap hari. Lakukan konsisten. 📈",
+        "Keseimbangan: Berdoa, Belajar, Bermain, Istirahat. ⚖️"
+    ];
+
+    const defaultHabits = [
+        { id: 1, text: "Ibadah Tepat Waktu", cat: "Ibadah" },
+        { id: 2, text: "Belajar / Kerjakan PR", cat: "Produktivitas" },
+        { id: 3, text: "Rapikan Kamar", cat: "Tugas Rumah" },
+        { id: 4, text: "Olahraga Ringan", cat: "Kesehatan" },
+        { id: 5, text: "Baca Buku Non-fiksi", cat: "Edukasi" }
+    ];
+
+    let state = JSON.parse(localStorage.getItem('humanos_gamma')) || {
+        xp: 0, level: 1, streak: 0, balance: 0, spotifyLinked: false,
+        habits: defaultHabits, history: {}, finance: []
+    };
+
+    const dateKey = new Date().toISOString().split('T')[0];
+    
+    if (!state.history[dateKey]) {
+        state.history[dateKey] = { 
+            completedHabits: [], screentime: 0, mood: 'Senang 😊', gratitude: '', outfit: 'Seragam OSIS', image: null 
+        };
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        if(!state.history[yesterday]) { state.streak = 0; } 
+        else { state.streak++; }
+    }
+
+    // --- NAVIGATION ---
+    function showPage(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if(el) el.classList.add('active');
+        if (id === 'stats') renderChart();
+    }
+
+    // --- HABIT SYSTEM & BUG FIX ---
+    function renderHabits() {
+        const container = document.getElementById('habit-container');
+        const completed = state.history[dateKey].completedHabits || [];
+        
+        if(state.habits.length === 0) {
+            container.innerHTML = `<div style="text-align:center; opacity:0.5; padding: 10px;">Misi kosong. Tambahkan misimu!</div>`;
+        } else {
+            container.innerHTML = state.habits.map((h, index) => {
+                const isDone = completed.includes(h.id);
+                return `
+                <div class="habit-row">
+                    <div style="flex:1;">
+                        <div style="font-size: 0.65rem; color: var(--secondary-dark); font-weight: 800; text-transform: uppercase;">${h.cat}</div>
+                        <div style="${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''} font-weight: 500; transition: 0.2s;">${h.text}</div>
+                    </div>
+                    <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleHabit(${h.id})">
+                    <button class="del-btn" onclick="removeHabit(${index})">Hapus</button>
+                </div>
+            `}).join('');
+        }
+        updateProgressUI();
+    }
+
+    // FIX: Add logic to SUBTRACT XP if user unchecks the box
+    function toggleHabit(id) {
+        let completed = state.history[dateKey].completedHabits || [];
+        if (completed.includes(id)) {
+            completed = completed.filter(hid => hid !== id); // Uncheck
+            updateXP(-20); // Pengurangan XP mencegah kecurangan (bug fix)
+        } else {
+            completed.push(id); // Check
+            updateXP(20);
+        }
+        state.history[dateKey].completedHabits = completed;
+        saveAll();
+        renderHabits();
+    }
+
+    function toggleEditHabit() {
+        const card = document.getElementById('habit-card');
+        const form = document.getElementById('add-habit-form');
+        card.classList.toggle('edit-mode');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function addHabit() {
+        const text = document.getElementById('new-habit-text').value.trim();
+        const cat = document.getElementById('new-habit-cat').value;
+        if(!text) return;
+        
+        state.habits.push({ id: Date.now(), text, cat });
+        document.getElementById('new-habit-text').value = '';
+        saveAll();
+        renderHabits();
+    }
+
+    function removeHabit(index) {
+        if(confirm("Hapus misi ini permanen?")) {
+            state.habits.splice(index, 1);
+            saveAll();
+            renderHabits();
+        }
+    }
+
+    function updateProgressUI() {
+        if(state.habits.length === 0) return;
+        const done = (state.history[dateKey].completedHabits || []).filter(id => state.habits.some(h => h.id === id)).length;
+        const total = state.habits.length;
+        const pct = Math.round((done / total) * 100) || 0;
+        document.getElementById('progress-pct').innerText = pct + '%';
+    }
+
+    // --- LEVEL & XP SYSTEM ---
+    function updateXP(amt) {
+        if (state.level === 10 && amt > 0) return; // Maksimal level 10
+        
+        state.xp += amt;
+        
+        // Level Up
+        if (state.xp >= 500) {
+            state.xp -= 500;
+            if (state.level < 10) {
+                state.level++;
+                alert(`🎉 LEVEL UP! Kamu naik ke Level ${state.level}: ${RanksInfo[state.level-1].name}`);
+            } else {
+                state.xp = 500; // Cap at max
+            }
+        } 
+        // Level Down (Jika membatalkan misi dan XP minus)
+        else if (state.xp < 0) {
+            if (state.level > 1) {
+                state.level--;
+                state.xp += 500; // Pinjam dari level sebelumnya
+            } else {
+                state.xp = 0; // Tidak bisa turun di bawah level 1
+            }
+        }
+        updateXPUI();
+    }
+
+    function updateXPUI() {
+        document.getElementById('lvl').innerText = state.level;
+        const rankIdx = Math.min(state.level - 1, 9);
+        document.getElementById('rank-display').innerText = RanksInfo[rankIdx].name;
+        document.getElementById('rank-icon').innerHTML = `<div class="rank-svg">${RanksInfo[rankIdx].svg}</div>`;
+        document.getElementById('streak').innerText = state.streak;
+        document.getElementById('xp-fill').style.width = (state.xp / 500 * 100) + '%';
+        document.getElementById('xp-text').innerText = state.level >= 10 ? "MAX LEVEL" : `${state.xp} / 500 XP`;
+    }
+
+    // --- SPOTIFY MOCKUP ---
+    function linkSpotify() {
+        const btn = document.querySelector('#spotify-unlinked button');
+        btn.innerText = "Menghubungkan...";
+        setTimeout(() => {
+            state.spotifyLinked = true;
+            saveAll();
+            renderSpotifyUI();
+        }, 1500);
+    }
+    
+    function renderSpotifyUI() {
+        if(state.spotifyLinked) {
+            document.getElementById('spotify-unlinked').style.display = 'none';
+            document.getElementById('spotify-linked').style.display = 'block';
+        } else {
+            document.getElementById('spotify-unlinked').style.display = 'block';
+            document.getElementById('spotify-linked').style.display = 'none';
+        }
+    }
+
+    // --- FINANCE SYSTEM ---
+    function addFinance(type) {
+        const amtRaw = document.getElementById('money-amt').value.trim();
+        let amt = parseFloat(amtRaw);
+        const note = document.getElementById('money-note').value.trim() || 'Tanpa Keterangan';
+        if (!amt || isNaN(amt)) return alert("Masukkan nominal yang benar!");
+        
+        if (type === 'out') amt = -Math.abs(amt);
+        else amt = Math.abs(amt);
+
+        state.finance.push({ note, amt, date: dateKey });
+        state.balance += amt;
+        saveAll();
+        document.getElementById('money-amt').value = '';
+        document.getElementById('money-note').value = '';
+        renderFinance();
+    }
+
+    function renderFinance() {
+        document.getElementById('balance').innerText = `Rp ${state.balance.toLocaleString('id-ID')}`;
+        const historyHTML = state.finance.slice(-5).reverse().map(f => `
+            <div style="margin-bottom:10px; padding:15px; font-size:0.9rem; display:flex; justify-content:space-between; align-items: center; border-radius: 12px; background: var(--border);">
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight:700;">${f.note}</span>
+                    <span style="font-size:0.7rem; opacity:0.6;">${f.date}</span>
+                </div>
+                <span style="font-weight:800; font-size: 1.05rem; color:${f.amt < 0 ? 'var(--danger)' : 'var(--success)'}">
+                    ${f.amt > 0 ? '+' : ''}${f.amt.toLocaleString('id-ID')}
+                </span>
+            </div>
+        `).join('');
+        document.getElementById('fin-history').innerHTML = historyHTML || '<div style="text-align:center; opacity:0.5; font-size:0.8rem;">Belum ada riwayat transaksi.</div>';
+    }
+
+    // --- FOCUS TIMER ---
+    let timer;
+    let isRunning = false;
+    let timeLeft = 1500; 
+
+    function updateTimerDisplay() {
+        let m = Math.floor(timeLeft / 60);
+        let s = timeLeft % 60;
+        document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' + s : s}`;
+    }
+
+    function startTimer() {
+        if(isRunning) return;
+        isRunning = true;
+        timer = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                isRunning = false;
+                timeLeft = 1500;
+                updateTimerDisplay();
+                alert("⏰ Waktu Fokus Selesai! Kamu dapat +50 XP!");
+                updateXP(50);
+                saveAll();
+            }
+        }, 1000);
+    }
+    function resetTimer() {
+        clearInterval(timer);
+        isRunning = false;
+        timeLeft = 1500;
+        updateTimerDisplay();
+    }
+
+    // --- SCREEN TIME TRACKER (SCROLL/INPUT BASED) ---
+    function updateScreentime() {
+        let h = parseInt(document.getElementById('st-hours').value) || 0;
+        let m = parseInt(document.getElementById('st-mins').value) || 0;
+        
+        // Handle overflow
+        if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
+        if (h > 24) h = 24;
+        
+        document.getElementById('st-hours').value = h;
+        document.getElementById('st-mins').value = m;
+        
+        const totalMins = (h * 60) + m;
+        state.history[dateKey].screentime = totalMins;
+        saveAll();
+        
+        renderScreentimeCommentary(totalMins);
+    }
+
+    function renderScreentimeCommentary(mins) {
+        const box = document.getElementById('st-commentary');
+        let text = ""; let color = ""; let bg = "";
+        
+        if (mins === 0) {
+            text = "Mulai catat waktu layarmu hari ini."; color = "var(--text)"; bg = "var(--border)";
+        } else if (mins <= 120) {
+            text = "Sangat Sehat! Pertahankan 🌿"; color = "#166534"; bg = "#dcfce7";
+        } else if (mins <= 240) {
+            text = "Batas Normal. Cukup baik 👍"; color = "#854d0e"; bg = "#fef08a";
+        } else if (mins <= 360) {
+            text = "Mulai berlebihan. Istirahatkan mata ⚠️"; color = "#c2410c"; bg = "#ffedd5";
+        } else {
+            text = "Terlalu lama! Awas mata rusak 🚨"; color = "#991b1b"; bg = "#fee2e2";
+        }
+        
+        box.innerText = text;
+        box.style.color = color;
+        box.style.background = bg;
+    }
+
+    // --- OUTFIT ---
+    function handleOutfitChange() {
+        const val = document.getElementById('outfit-select').value;
+        const customInput = document.getElementById('outfit-custom');
+        if(val === 'custom') {
+            customInput.style.display = 'block';
+            state.history[dateKey].outfit = customInput.value;
+        } else {
+            customInput.style.display = 'none';
+            state.history[dateKey].outfit = val;
+        }
+        saveAll();
+    }
+
+    // --- JOURNAL & IMAGE UPLOAD ---
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 400; // Lebih kecil agar muat banyak di memori
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.5); 
+                state.history[dateKey].image = dataUrl;
+                
+                document.getElementById('preview-img').src = dataUrl;
+                document.getElementById('preview-img').style.display = 'block';
+                saveAll();
+            }
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+
+    function viewJournalHistory() {
+        const area = document.getElementById('journal-history-area');
+        const list = document.getElementById('journal-history-list');
+        area.style.display = 'block';
+        
+        const keys = Object.keys(state.history).sort().reverse();
+        let html = '';
+        keys.forEach(k => {
+            const day = state.history[k];
+            if(day.gratitude || day.image) {
+                html += `
+                <div class="history-item">
+                    <div style="font-size:0.75rem; opacity:0.8; margin-bottom:5px; font-weight:bold;">📅 ${k} | Mood: ${day.mood || '-'}</div>
+                    <div style="font-weight:500; margin-bottom:5px; color:var(--text);">${day.gratitude || 'Tidak ada teks.'}</div>
+                    ${day.image ? `<img src="${day.image}" style="width:100%; border-radius:8px; margin-top:5px; border:1px solid var(--border);">` : ''}
+                </div>`;
+            }
+        });
+        list.innerHTML = html || "<p style='font-size:0.8rem; opacity:0.6;'>Belum ada riwayat jurnal.</p>";
+    }
+
+    // --- DATA MANAGEMENT ---
+    function saveAll() {
+        if(document.getElementById('mood-select')) state.history[dateKey].mood = document.getElementById('mood-select').value;
+        if(document.getElementById('gratitude')) state.history[dateKey].gratitude = document.getElementById('gratitude').value;
+        
+        if(document.getElementById('outfit-select').value === 'custom') {
+            state.history[dateKey].outfit = document.getElementById('outfit-custom').value;
+        }
+        
+        localStorage.setItem('humanos_gamma', JSON.stringify(state));
+    }
+
+    function exportData() {
+        const dataStr = JSON.stringify(state);
+        prompt("Salin seluruh teks di bawah ini dan simpan di catatan yang aman:", dataStr);
+    }
+    function importData() {
+        const imp = prompt("Tempelkan kode teks backup di sini:");
+        if (!imp) return;
+        try {
+            JSON.parse(imp); 
+            localStorage.setItem('humanos_gamma', imp);
+            window.location.reload();
+        } catch (e) {
+            alert("Kode backup tidak valid atau rusak.");
+        }
+    }
+    function clearAll() {
+        if (confirm("🚨 PERINGATAN! Seluruh data (Level, Uang, Habit, Jurnal) akan dihapus permanen. Lanjutkan?")) {
+            localStorage.removeItem('humanos_gamma');
+            window.location.reload();
+        }
+    }
+
+    // --- THEME ---
+    function toggleTheme() {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('humanos_theme', next);
+        if(document.getElementById('stats').classList.contains('active')) renderChart();
+    }
+
+    // --- CHART SETUP ---
+    let statChartObj = null;
+    function renderChart() {
+        const ctx = document.getElementById('statChart').getContext('2d');
+        const labels = Object.keys(state.history).slice(-7);
+        const data = labels.map(k => {
+            const completed = state.history[k].completedHabits || [];
+            if(state.habits.length === 0) return 0;
+            return (completed.length / state.habits.length) * 100;
+        });
+
+        const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        const gridColor = document.body.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const textColor = document.body.getAttribute('data-theme') === 'dark' ? '#cbd5e1' : '#475569';
+
+        if(statChartObj) statChartObj.destroy();
+
+        statChartObj = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: labels.map(l => l.substring(5)), 
+                datasets: [{ 
+                    label: 'Produktivitas (%)', data, 
+                    borderColor: color, backgroundColor: color + '33',
+                    borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4
+                }] 
+            },
+            options: { 
+                responsive: true,
+                plugins: { legend: { labels: { color: textColor, font: {family: 'Plus Jakarta Sans'} } } },
+                scales: { 
+                    y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { color: textColor } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                } 
+            }
+        });
+    }
+
+    // --- INITIALIZATION ---
+    function init() {
+        const d = new Date();
+        document.getElementById('display-date').innerText = d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('daily-quote').innerText = Quotes[d.getDay() % Quotes.length];
+
+        const theme = localStorage.getItem('humanos_theme') || 'light';
+        document.body.setAttribute('data-theme', theme);
+
+        const todayData = state.history[dateKey];
+        if(todayData.mood) document.getElementById('mood-select').value = todayData.mood;
+        if(todayData.gratitude) document.getElementById('gratitude').value = todayData.gratitude;
+        
+        if(todayData.image) {
+            document.getElementById('preview-img').src = todayData.image;
+            document.getElementById('preview-img').style.display = 'block';
+        }
+
+        const selectOutfit = document.getElementById('outfit-select');
+        const customOutfit = document.getElementById('outfit-custom');
+        let outfitFound = false;
+        for (let i = 0; i < selectOutfit.options.length; i++) {
+            if (selectOutfit.options[i].value === todayData.outfit) {
+                selectOutfit.selectedIndex = i;
+                outfitFound = true; break;
+            }
+        }
+        if(!outfitFound && todayData.outfit) {
+            selectOutfit.value = 'custom';
+            customOutfit.style.display = 'block';
+            customOutfit.value = todayData.outfit;
+        }
+
+        // Screen time initialization
+        const st = todayData.screentime || 0;
+        document.getElementById('st-hours').value = Math.floor(st / 60);
+        document.getElementById('st-mins').value = st % 60;
+        renderScreentimeCommentary(st);
+
+        // Render UI
+        renderHabits();
+        updateXPUI();
+        renderFinance();
+        renderSpotifyUI();
+        updateTimerDisplay();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
